@@ -69,7 +69,8 @@ export function useCalendarData(currentDate) {
         diary_entries(highlights, full_entry, ai_mood, habit_checklist), 
         media_logs(movie_title, movie_rating, movie_comment, series_name, series_rating, book_title, book_rating, song_title, song_artist),
         course_tasks(description, is_complete, course_id),
-        goal_progress(goal_id)
+        goal_progress(goal_id),
+        yearly_goal_progress(goal_id)
       `).gte('date', startDate).lte('date', endDate),
 
       supabase.from('monthly_goals').select('*').eq('target_month', month).eq('target_year', year),

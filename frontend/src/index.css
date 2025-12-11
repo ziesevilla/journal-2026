@@ -258,3 +258,428 @@ button, input, textarea, select, span, div {
   border-top: 2px dashed #ddd;
   margin: 15px 0;
 }
+
+/* src/index.css */
+
+/* --- DIARY MODAL: THE NOTEBOOK --- */
+.modal-diary-container {
+  max-width: 500px !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: 10px 10px 30px rgba(0,0,0,0.3);
+}
+
+.diary-paper {
+  background-color: #fdfbf7; /* Off-white paper */
+  /* Blue Horizontal Lines */
+  background-image: repeating-linear-gradient(transparent, transparent 31px, #aebcd6 31px, #aebcd6 32px);
+  /* Red Margin Line */
+  border-left: 4px double rgba(255, 100, 100, 0.3);
+  padding: 30px 25px 30px 35px; /* Extra padding on left for margin */
+  position: relative;
+  min-height: 500px;
+  border-radius: 2px 10px 10px 2px;
+  
+  /* Binder Holes (Visual Trick using radial gradient on the left edge) */
+  background: 
+    radial-gradient(circle at 10px 40px, #333 4px, transparent 5px),
+    radial-gradient(circle at 10px 50%, #333 4px, transparent 5px),
+    radial-gradient(circle at 10px calc(100% - 40px), #333 4px, transparent 5px),
+    repeating-linear-gradient(transparent, transparent 31px, #aebcd6 31px, #aebcd6 32px),
+    #fdfbf7;
+}
+
+/* Handwritten Inputs */
+.diary-input {
+  background: transparent;
+  border: none;
+  font-family: 'Patrick Hand', 'Caveat', cursive; /* Ensure you have a handwriting font imported */
+  font-size: 1.3rem;
+  line-height: 2rem; /* Must match the background-image line spacing (32px) */
+  color: #2c3e50; /* Ink color */
+  width: 100%;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.diary-input:focus {
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+.diary-input::placeholder {
+  color: #aebcd6;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* Mood Stamps */
+.mood-stamp {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  background: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.mood-stamp:hover { transform: scale(1.1) rotate(5deg); }
+.mood-stamp.active {
+  transform: scale(1.15) rotate(-5deg);
+  box-shadow: 0 0 0 3px #333, 0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* src/index.css - Add to bottom */
+
+/* --- MEDIA MODAL: THE TICKET --- */
+.modal-media-container {
+  max-width: 420px !important;
+  background: transparent !important;
+  border: none !important;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3)); /* Shadow follows the shape */
+}
+
+.media-ticket {
+  background: white;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  
+  /* THE TICKET CUTOUT EFFECT */
+  /* This creates two transparent circles on the left and right edges */
+  mask-image: radial-gradient(circle at 0 70px, transparent 15px, black 16px), 
+              radial-gradient(circle at 100% 70px, transparent 15px, black 16px);
+  mask-composite: intersect; /* Ensure both masks apply */
+  /* Fallback for older browsers (standard clipping) */
+  -webkit-mask-image: radial-gradient(circle at 0 70px, transparent 15px, black 16px), 
+                      radial-gradient(circle at 100% 70px, transparent 15px, black 16px);
+  -webkit-mask-composite: source-in; 
+}
+
+/* The Dashed Line connecting the notches */
+.media-ticket-divider {
+  border-top: 2px dashed #ddd;
+  margin-top: 20px; /* Positions line exactly at the notch center */
+  margin-bottom: 20px;
+  position: relative;
+}
+
+/* Custom Media Inputs */
+.media-input {
+  background: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: 600;
+  color: #444;
+  transition: all 0.2s;
+}
+.media-input:focus {
+  background: white;
+  border-color: var(--theme-color);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+}
+.media-input::placeholder {
+  font-weight: 400;
+  color: #bbb;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+}
+
+/* Rating Stars */
+.rating-btn {
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #e0e0e0;
+  transition: color 0.2s;
+  padding: 0 2px;
+}
+.rating-btn.active { color: #ffc107; }
+
+/* src/index.css - Add to bottom */
+
+/* --- UNIVERSITY MODAL: THE PLANNER --- */
+.modal-university-container {
+  max-width: 450px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.university-notebook {
+  background-color: #fff;
+  /* Graph Paper Effect */
+  background-image: 
+    linear-gradient(#e1f5fe 1px, transparent 1px),
+    linear-gradient(90deg, #e1f5fe 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: center;
+  
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  position: relative;
+  margin-top: 20px; /* Space for spirals */
+  border: 1px solid #d1e7dd;
+}
+
+/* The Spiral Binding Holes at the Top */
+.university-notebook::before {
+  content: "";
+  position: absolute;
+  top: -15px;
+  left: 10px;
+  right: 10px;
+  height: 20px;
+  /* Repeating circles for spiral holes */
+  background: radial-gradient(circle at 10px 10px, #333 3px, transparent 4px);
+  background-size: 30px 20px; /* Spacing between holes */
+  background-repeat: repeat-x;
+}
+
+/* Task Checkbox Customization */
+.task-checkbox {
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 2px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  appearance: none; /* Remove default styling */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.task-checkbox:checked {
+  background-color: #28a745;
+  border-color: #28a745;
+  position: relative;
+}
+.task-checkbox:checked::after {
+  content: '✓';
+  color: white;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+/* Custom Input that blends with graph paper */
+.uni-input {
+  background: rgba(255,255,255,0.8);
+  border: 2px solid #333;
+  border-radius: 0;
+  font-family: 'Courier New', monospace; /* Code/Technical font */
+  font-weight: bold;
+}
+
+/* src/index.css - Add to bottom */
+
+/* --- GOALS MODAL: THE VISION BOARD --- */
+.modal-goals-container {
+  max-width: 480px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.goals-board {
+  background-color: #f4f7f6; /* Dashboard Grey */
+  border-radius: 20px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+  overflow: hidden;
+  position: relative;
+  border: 4px solid white;
+}
+
+/* Header Strip */
+.goals-header {
+  padding: 25px;
+  background: white;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+}
+
+/* Daily Habit Pills */
+.habit-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border-left: 5px solid transparent;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.habit-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+.habit-card.completed {
+  background: white;
+  border-left-color: var(--theme-color); /* Uses month theme */
+}
+.habit-card.completed::after {
+  content: "✓";
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  font-size: 3rem;
+  color: var(--theme-color);
+  opacity: 0.1;
+  font-weight: bold;
+}
+
+/* Big Goal Trophies */
+.milestone-card {
+  background: white;
+  border: 2px dashed #ddd;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  opacity: 0.8;
+}
+.milestone-card:hover { border-color: #bbb; opacity: 1; }
+
+.milestone-card.completed {
+  border-style: solid;
+  border-color: #ffc107; /* Gold for trophy */
+  background: #fffbef;
+  opacity: 1;
+  box-shadow: 0 0 15px rgba(255, 193, 7, 0.2);
+}
+
+/* src/index.css - Add to bottom */
+
+/* --- FORCE TODAY HIGHLIGHT --- */
+/* This ensures 'Today' pops out even if the category (like University) has complex borders */
+.cell-today {
+  border: 3px solid var(--theme-accent) !important;
+  box-shadow: 0 0 15px var(--theme-accent) !important;
+  transform: scale(1.08) !important;
+  z-index: 50 !important;
+  background-color: white; /* Ensure transparency doesn't ruin the glow */
+}
+
+/* Position the "Today" badge so it doesn't overlap tasks/ratings */
+.today-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--theme-accent);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 60;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* src/index.css - Add to bottom */
+
+/* --- SETTINGS MODAL: CONTROL CENTER --- */
+.modal-settings-container {
+  max-width: 550px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.settings-card {
+  background: #ffffff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  height: 80vh; /* Fixed height for consistent look */
+}
+
+/* Header Area */
+.settings-header {
+  padding: 20px 25px;
+  background: var(--theme-color);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Modern Tabs */
+.settings-tabs {
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  padding: 0 10px;
+  overflow-x: auto; /* Scroll if too many tabs */
+}
+
+.settings-tab-btn {
+  border: none;
+  background: transparent;
+  padding: 15px 20px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #adb5bd;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.settings-tab-btn:hover { color: #495057; background: #f1f3f5; }
+
+.settings-tab-btn.active {
+  color: var(--theme-color);
+  border-bottom-color: var(--theme-color);
+  background: white;
+}
+
+/* List Items */
+.settings-list-item {
+  background: white;
+  border: 1px solid #f1f3f5;
+  border-radius: 10px;
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.settings-list-item:hover {
+  transform: translateX(4px);
+  border-color: var(--theme-color);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* Inputs */
+.settings-add-input {
+  border: 2px solid #eee;
+  border-radius: 12px 0 0 12px;
+  padding: 12px 15px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+.settings-add-input:focus {
+  border-color: var(--theme-color);
+  box-shadow: none;
+  outline: none;
+}
+
+.settings-add-btn {
+  border-radius: 0 12px 12px 0;
+  background: var(--theme-color);
+  color: white;
+  border: none;
+  padding: 0 20px;
+  font-weight: bold;
+}
+.settings-add-btn:hover { opacity: 0.9; }

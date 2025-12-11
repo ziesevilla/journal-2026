@@ -2,119 +2,194 @@
 import React, { useState, useEffect } from 'react';
 import supabase from '../../services/supabaseClient';
 
-export default function SettingsModal({ session, onClose, themeColor, themeFont }) {
-  const [activeTab, setActiveTab] = useState('finance'); // 'finance' (expenses), 'income'
+export default function SettingsModal({ session, onClose, themeColor, themeFont, currentMonth, currentYear }) {
+  const [activeTab, setActiveTab] = useState('finance'); // 'finance', 'income', 'university', 'goals'
+  
+  // Data State
   const [expenseCats, setExpenseCats] = useState([]);
   const [incomeCats, setIncomeCats] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [monthlyHabits, setMonthlyHabits] = useState([]);
+  const [yearlyGoals, setYearlyGoals] = useState([]);
+  
+  // UI State
   const [newCat, setNewCat] = useState('');
   const [loading, setLoading] = useState(false);
+  const [goalType, setGoalType] = useState('daily'); // 'daily', 'big'
 
   useEffect(() => {
     fetchCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCategories = async () => {
+    // 1. Fetch Categories & Courses
     const { data: exp } = await supabase.from('expense_categories').select('*').order('created_at', { ascending: true });
     const { data: inc } = await supabase.from('income_categories').select('*').order('created_at', { ascending: true });
+    const { data: uni } = await supabase.from('courses').select('*').order('created_at', { ascending: true });
+    
+    // 2. Fetch Goals (Context aware: Current Month/Year)
+    const { data: habits } = await supabase.from('monthly_goals')
+        .select('*')
+        .eq('target_month', currentMonth)
+        .eq('target_year', currentYear)
+        .order('created_at', { ascending: true });
+
+    const { data: big } = await supabase.from('yearly_goals')
+        .select('*')
+        .eq('year', currentYear)
+        .order('created_at', { ascending: true });
+
     setExpenseCats(exp || []);
     setIncomeCats(inc || []);
+    setCourses(uni || []);
+    setMonthlyHabits(habits || []);
+    setYearlyGoals(big || []);
   };
 
-  const addCategory = async (e) => {
+  const addItem = async (e) => {
     e.preventDefault();
     if (!newCat.trim()) return;
     setLoading(true);
     
-    const table = activeTab === 'finance' ? 'expense_categories' : 'income_categories';
+    let table = '';
+    let payload = { user_id: session.user.id };
+
+    if (activeTab === 'finance') {
+        table = 'expense_categories';
+        payload.label = newCat.trim();
+    } else if (activeTab === 'income') {
+        table = 'income_categories';
+        payload.label = newCat.trim();
+    } else if (activeTab === 'university') {
+        table = 'courses';
+        payload.name = newCat.trim();
+    } else if (activeTab === 'goals') {
+        if (goalType === 'daily') {
+            table = 'monthly_goals';
+            payload.title = newCat.trim();
+            payload.target_month = currentMonth;
+            payload.target_year = currentYear;
+        } else {
+            table = 'yearly_goals';
+            payload.title = newCat.trim();
+            payload.year = currentYear;
+        }
+    }
     
-    await supabase.from(table).insert([{ user_id: session.user.id, label: newCat.trim() }]);
+    await supabase.from(table).insert([payload]);
     setNewCat('');
     await fetchCategories();
     setLoading(false);
   };
 
-  const deleteCategory = async (id, table) => {
-    if(!window.confirm("Delete this category?")) return;
+  const deleteItem = async (id, table) => {
+    if(!window.confirm("Delete this item?")) return;
     await supabase.from(table).delete().eq('id', id);
     fetchCategories();
   };
 
-  // Render Helper to avoid duplicating code for Expense vs Income lists
-  const renderList = (items, table, placeholder) => (
-    <div className="animate-fade-in">
-        <h6 className="fw-bold text-muted mb-3">{activeTab === 'finance' ? 'Expense' : 'Income'} Categories</h6>
+  // Helper to render lists with the new aesthetic
+  const renderList = (items, table, placeholder, displayKey = 'label') => (
+    <div className="animate-fade-in h-100 d-flex flex-column">
         
-        {/* Add New */}
-        <form onSubmit={addCategory} className="input-group mb-4 shadow-sm">
+        {/* Sub-Tabs for Goals */}
+        {activeTab === 'goals' && (
+            <div className="d-flex justify-content-center mb-4">
+                <div className="btn-group shadow-sm">
+                    <button className={`btn btn-sm px-3 fw-bold ${goalType === 'daily' ? 'btn-dark' : 'btn-outline-secondary border-0 bg-white'}`} onClick={() => setGoalType('daily')}>Daily Habits</button>
+                    <button className={`btn btn-sm px-3 fw-bold ${goalType === 'big' ? 'btn-dark' : 'btn-outline-secondary border-0 bg-white'}`} onClick={() => setGoalType('big')}>Yearly Goals</button>
+                </div>
+            </div>
+        )}
+
+        {/* Input Area */}
+        <form onSubmit={addItem} className="input-group mb-4 shadow-sm" style={{flexShrink:0}}>
             <input 
-                className="form-control" 
-                placeholder={`New ${activeTab === 'finance' ? 'Expense' : 'Income'} (e.g. ${placeholder})`} 
+                className="form-control settings-add-input" 
+                placeholder={placeholder} 
                 value={newCat} 
                 onChange={e => setNewCat(e.target.value)} 
+                autoFocus
             />
-            <button className="btn btn-dark" type="submit" disabled={loading}>
-                {loading ? 'Adding...' : 'Add +'}
+            <button className="settings-add-btn" type="submit" disabled={loading}>
+                {loading ? '...' : '+'}
             </button>
         </form>
 
-        {/* List */}
-        <div className="list-group shadow-sm">
-            {items.map(cat => (
-                <div key={cat.id} className="list-group-item d-flex justify-content-between align-items-center">
-                    <span className="fw-bold text-dark">{cat.label}</span>
-                    <button 
-                        className="btn btn-sm btn-outline-danger border-0 rounded-circle" 
-                        title="Delete"
-                        onClick={() => deleteCategory(cat.id, table)}
-                    >
-                        🗑️
-                    </button>
+        {/* List Area */}
+        <div className="flex-grow-1 overflow-auto pe-2" style={{ maxHeight: '400px' }}>
+            {items.length === 0 ? (
+                <div className="text-center text-muted mt-5 opacity-50">
+                    <div style={{fontSize:'3rem', marginBottom:'10px'}}>📂</div>
+                    <small>No items found.<br/>Add one to get started.</small>
                 </div>
-            ))}
-            {items.length === 0 && <div className="p-3 text-center text-muted fst-italic">No categories yet.</div>}
+            ) : (
+                <div className="d-flex flex-column">
+                    {items.map(item => (
+                        <div key={item.id} className="settings-list-item">
+                            <span className="fw-bold text-dark">{item[displayKey]}</span>
+                            <button 
+                                className="btn btn-sm text-danger opacity-50 hover-opacity-100 p-0" 
+                                style={{fontSize:'1.1rem', lineHeight:1}}
+                                onClick={() => deleteItem(item.id, table)}
+                                title="Delete"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     </div>
   );
 
   return (
     <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center animate-fade-in" 
-         style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 3000, backdropFilter: 'blur(2px)' }}>
+         style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 3000, backdropFilter: 'blur(4px)' }}>
       
-      <div className="card shadow-lg border-0 overflow-hidden" 
-           style={{ width: '90%', maxWidth: '600px', maxHeight: '85vh', borderRadius: '15px' }}>
+      {/* THE CONTROL CENTER CARD */}
+      <div className="settings-card w-100 modal-settings-container" style={{ '--theme-color': themeColor }}>
         
-        {/* Header */}
-        <div className="card-header text-white d-flex justify-content-between align-items-center py-3" 
-             style={{ backgroundColor: themeColor, fontFamily: themeFont }}>
-            <h5 className="m-0 fw-bold">⚙️ SETTINGS</h5>
+        {/* 1. Header */}
+        <div className="settings-header">
+            <div>
+                <h5 className="m-0 fw-bold" style={{ fontFamily: themeFont, letterSpacing:'1px' }}>CONFIGURATION</h5>
+                <small className="opacity-75" style={{fontSize:'0.7rem'}}>MANAGE YOUR JOURNAL DATA</small>
+            </div>
             <button className="btn btn-sm btn-close btn-close-white" onClick={onClose}></button>
         </div>
 
-        {/* Body */}
-        <div className="card-body p-0 d-flex flex-column" style={{height: '100%'}}>
-            
-            {/* Tabs */}
-            <div className="d-flex border-bottom bg-light">
+        {/* 2. Navigation Tabs */}
+        <div className="settings-tabs">
+            {['finance', 'income', 'university', 'goals'].map(tab => (
                 <button 
-                    className={`btn rounded-0 flex-grow-1 py-3 fw-bold small ${activeTab === 'finance' ? 'text-dark bg-white border-bottom border-3 border-dark' : 'text-muted'}`}
-                    onClick={() => { setActiveTab('finance'); setNewCat(''); }}
+                    key={tab}
+                    className={`settings-tab-btn ${activeTab === tab ? 'active' : ''}`}
+                    onClick={() => { setActiveTab(tab); setNewCat(''); }}
                 >
-                    💸 EXPENSES
+                    {tab === 'finance' && '💸 Expenses'}
+                    {tab === 'income' && '💰 Income'}
+                    {tab === 'university' && '🎓 Courses'}
+                    {tab === 'goals' && '🎯 Goals'}
                 </button>
-                <button 
-                    className={`btn rounded-0 flex-grow-1 py-3 fw-bold small ${activeTab === 'income' ? 'text-dark bg-white border-bottom border-3 border-dark' : 'text-muted'}`}
-                    onClick={() => { setActiveTab('income'); setNewCat(''); }}
-                >
-                    💰 INCOME
-                </button>
-            </div>
-
-            {/* Content Area */}
-            <div className="p-4 overflow-auto" style={{ maxHeight: '60vh' }}>
-                {activeTab === 'finance' && renderList(expenseCats, 'expense_categories', 'Groceries')}
-                {activeTab === 'income' && renderList(incomeCats, 'income_categories', 'Salary')}
-            </div>
+            ))}
         </div>
+
+        {/* 3. Main Content Area */}
+        <div className="p-4 flex-grow-1 bg-light">
+            {activeTab === 'finance' && renderList(expenseCats, 'expense_categories', 'e.g. Groceries')}
+            {activeTab === 'income' && renderList(incomeCats, 'income_categories', 'e.g. Salary')}
+            {activeTab === 'university' && renderList(courses, 'courses', 'e.g. Data Structures', 'name')}
+            {activeTab === 'goals' && renderList(
+                goalType === 'daily' ? monthlyHabits : yearlyGoals, 
+                goalType === 'daily' ? 'monthly_goals' : 'yearly_goals', 
+                goalType === 'daily' ? 'e.g. Drink Water (Daily Habit)' : 'e.g. Visit Japan (Yearly Goal)', 
+                'title'
+            )}
+        </div>
+
       </div>
     </div>
   );

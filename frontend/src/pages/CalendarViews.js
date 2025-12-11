@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 // COMPONENTS
 import EntryModal from '../components/modals/EntryModal';
 import AnalyticsModal from '../components/modals/AnalyticsModal';
-import SettingsModal from '../components/modals/SettingsModal'; // Import Settings
+import SettingsModal from '../components/modals/SettingsModal';
 
 // HOOKS & UTILS
 import { useCalendarData } from '../hooks/useCalendarData';
@@ -35,7 +35,7 @@ export default function CalendarView({ session }) {
   const [editingDate, setEditingDate] = useState(null); 
   const [editingData, setEditingData] = useState(null); 
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [showSettings, setShowSettings] = useState(false); // New Settings State
+  const [showSettings, setShowSettings] = useState(false);
 
   const { logs, loading, monthlyGoals, currentStreak, goalStreaks, refresh } = useCalendarData(currentDate);
 
@@ -56,7 +56,6 @@ export default function CalendarView({ session }) {
       const duration = Math.random() * 15 + 20 + 's'; 
       const size = Math.random() * 1 + 1.2 + 'rem'; 
 
-      // 1. Horizontal Drifting
       if (decor.animation === 'drift') {
         const goesRight = i % 2 === 0;
         const animName = goesRight ? 'drift-right' : 'drift-left';
@@ -77,7 +76,6 @@ export default function CalendarView({ session }) {
         );
       }
 
-      // 2. Rising
       if (decor.animation === 'rise') {
         return (
           <span key={i} className="seasonal-particle"
@@ -92,7 +90,6 @@ export default function CalendarView({ session }) {
         );
       }
 
-      // 3. Falling
       return (
         <span key={i} className="seasonal-particle"
           style={{
@@ -110,7 +107,7 @@ export default function CalendarView({ session }) {
     return <div className="seasonal-bg-container">{items}</div>;
   }, [theme]); 
 
-  // --- STYLES & HELPERS ---
+  // --- HELPERS ---
   const getModalStyle = () => {
     if (!hoveredLog) return { bg: '#fff', border: 'transparent' };
     const { type, finances, diary_entries, media_logs, course_tasks, goal_progress } = hoveredLog;
@@ -130,7 +127,8 @@ export default function CalendarView({ session }) {
   const modalStyle = getModalStyle();
 
   const handlePixelClick = (dateKey, existingLog) => {
-    const today = new Date().toISOString().split('T')[0];
+    // FORCE LOCAL TIME COMPARISON
+    const today = new Date().toLocaleDateString('en-CA');
     if (dateKey > today) { alert("🔮 You cannot write entries for the future!"); return; }
     setEditingDate(dateKey);
     setEditingData(existingLog || null);
@@ -139,7 +137,9 @@ export default function CalendarView({ session }) {
   // --- GRID RENDERER ---
   const renderGrid = (type, getStyleData) => {
     const pixels = [];
-    const today = new Date().toISOString().split('T')[0];
+    
+    // 1. GET LOCAL TODAY STRING (YYYY-MM-DD)
+    const today = new Date().toLocaleDateString('en-CA'); 
 
     for (let i = 0; i < firstDayIndex; i++) pixels.push(<div key={`blank-${i}`}></div>);
 
@@ -151,6 +151,7 @@ export default function CalendarView({ session }) {
       let styleData = getStyleData(dayData);
       
       const isFuture = dateKey > today;
+      const isToday = dateKey === today; // Exact match on 'YYYY-MM-DD'
       const holiday = HOLIDAYS[dateString];
 
       // GOALS: Calculate Conic Gradient
@@ -169,7 +170,10 @@ export default function CalendarView({ session }) {
             onMouseLeave={() => setHoveredLog(null)}
             onClick={() => handlePixelClick(dateKey, dayData)}
         >
-          <div className={`d-flex justify-content-center align-items-center shadow-sm position-relative cell-${type}`}
+          {/* ADDED: 'is-today' class if isToday is true. 
+             This triggers the CSS override in index.css 
+          */}
+          <div className={`d-flex justify-content-center align-items-center shadow-sm position-relative cell-${type} ${isToday ? 'cell-today' : ''}`}
             style={{ 
               width: '80%', height: '70%', 
               backgroundColor: isFuture ? '#f8f9fa' : (styleData.backgroundColor || 'white'),
@@ -179,15 +183,30 @@ export default function CalendarView({ session }) {
               cursor: isFuture ? 'not-allowed' : 'pointer',
               color: type === 'goals' ? 'transparent' : 'white', 
               fontSize: '12px', fontWeight: 'bold',
+              
+              // Scale Up Today logic handled by CSS class 'cell-today' now, but fallback here:
               transform: (!isFuture && hoveredLog?.date === dateKey && hoveredLog?.type === type) ? 'scale(1.15)' : 'scale(1)',
-              zIndex: hoveredLog?.date === dateKey ? 10 : 1
+              
+              zIndex: hoveredLog?.date === dateKey ? 10 : (isToday ? 5 : 1)
             }} 
             title={holiday ? holiday.name : ''}
           >
             {!isFuture && styleData.children}
             {holiday && !isFuture && !styleData.children && <span style={{fontSize:'12px', color: '#555'}}>{holiday.icon}</span>}
+            
+            {/* NEW BADGE: Always shows if isToday is true */}
+            {isToday && (
+                <div className="today-badge">TODAY</div>
+            )}
           </div>
-          <span style={{ fontSize: '10px', color: isFuture ? '#ccc' : (holiday ? theme.primary : '#666'), marginTop:'2px', fontWeight: holiday ? 'bold' : 'normal' }}>{d}</span>
+          <span style={{ 
+              fontSize: '10px', 
+              color: isToday ? theme.accent : (isFuture ? '#ccc' : (holiday ? theme.primary : '#666')), 
+              marginTop:'2px', 
+              fontWeight: (holiday || isToday) ? 'bold' : 'normal' 
+          }}>
+              {d}
+          </span>
         </div>
       );
     }
@@ -200,12 +219,20 @@ export default function CalendarView({ session }) {
   };
 
   return (
+    // Pass theme accent to CSS variables for the 'Today' glow
     <div className="container-fluid p-0 d-flex flex-row" 
-         style={{ backgroundColor: theme.bg, height: '100vh', overflow: 'hidden', position: 'relative', fontFamily: theme.font }}>
+         style={{ 
+             backgroundColor: theme.bg, 
+             height: '100vh', 
+             overflow: 'hidden', 
+             position: 'relative', 
+             fontFamily: theme.font,
+             '--theme-accent': theme.accent 
+         }}>
       
       {particles}
       
-      {/* --- MODALS --- */}
+      {/* MODALS */}
       {editingDate && (
           <EntryModal 
             session={session} date={editingDate} existingData={editingData}
@@ -216,15 +243,15 @@ export default function CalendarView({ session }) {
       )}
       {showAnalytics && <AnalyticsModal logs={logs} themeColor={theme.primary} monthName={monthName} year={year} onClose={() => setShowAnalytics(false)} />}
       
-      {/* SETTINGS MODAL */}
       {showSettings && (
           <SettingsModal 
             session={session} onClose={() => setShowSettings(false)} 
             themeColor={theme.primary} themeFont={theme.font} 
+            currentMonth={month} currentYear={year}
           />
       )}
 
-      {/* --- SIDEBAR --- */}
+      {/* SIDEBAR */}
       <div className="d-flex flex-column p-4 shadow bg-white h-100" style={{ width: '280px', zIndex: 20 }}>
           <div className="mb-4 text-center">
              <h6 className="text-muted text-uppercase small fw-bold tracking-wide">Journal 2026</h6>
@@ -255,7 +282,7 @@ export default function CalendarView({ session }) {
           </div>
       </div>
 
-      {/* --- CONTENT --- */}
+      {/* CONTENT */}
       <div className="d-flex flex-column flex-grow-1 h-100" style={{ zIndex: 5, overflow: 'hidden' }}>
         {loading ? <div className="text-center p-5 m-auto">Loading data...</div> : (
           <div className="d-flex flex-column h-100 p-3">
