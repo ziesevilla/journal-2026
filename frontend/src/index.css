@@ -1,0 +1,260 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bitter:wght@500&family=Cinzel:wght@600&family=Cinzel+Decorative:wght@700&family=Lora:ital,wght@1,500&family=Merriweather:wght@700&family=Montserrat:wght@600&family=Nunito:wght@700&family=Oswald:wght@500&family=Playfair+Display:ital,wght@1,600&family=Quicksand:wght@600&family=Raleway:wght@300&display=swap');
+
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+html, body, #root {
+  height: 100%;       /* Force full height */
+  overflow: hidden;   /* KILL THE SCROLLBAR */
+  margin: 0;
+  padding: 0;
+}
+
+/* Force all form elements to use the Month's theme font */
+button, input, textarea, select, span, div {
+  font-family: inherit;
+}
+
+/* --- AMBIENT ANIMATIONS --- */
+
+.seasonal-bg-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.seasonal-particle {
+  position: absolute;
+  font-size: 1.5rem;
+  opacity: 0.6;
+}
+
+/* 1. HORIZONTAL DRIFT (Left -> Right) */
+@keyframes drift-right {
+  0% { transform: translateX(-20vw); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% { transform: translateX(120vw); opacity: 0; }
+}
+
+/* 2. HORIZONTAL DRIFT (Right -> Left) */
+@keyframes drift-left {
+  0% { transform: translateX(120vw); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% { transform: translateX(-20vw); opacity: 0; }
+}
+
+/* 3. VERTICAL FALL (Snow, Rain) */
+@keyframes fall {
+  0% { transform: translateY(-10vh); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(110vh); opacity: 0; }
+}
+
+/* 4. FALL & SWAY (Leaves) */
+@keyframes fall-sway {
+  0% { transform: translateY(-10vh) translateX(-20px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translateY(50vh) translateX(20px) rotate(180deg); }
+  100% { transform: translateY(110vh) translateX(-20px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes rise {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  10% { opacity: 0.8; }
+  100% { transform: translateY(-120vh) scale(1.2); opacity: 0; }
+}
+
+/* 6. RAIN (Fast Fall) */
+@keyframes rain {
+  0% { transform: translateY(-10vh); opacity: 0; }
+  10% { opacity: 0.6; }
+  100% { transform: translateY(110vh); opacity: 0; }
+}
+
+/* FINANCE: The Receipt */
+.cell-finance {
+  border-radius: 0px;
+  font-family: 'Roboto Mono', monospace;
+  border: 2px solid rgba(0,0,0,0.2);
+  /* Progress bar effect via background gradient */
+  background-size: 100% 200%; 
+  transition: all 0.2s;
+}
+.cell-finance:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 0px rgba(0,0,0,0.2);
+}
+
+/* MEDIA: The Poster */
+.cell-media {
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  font-family: 'Oswald', sans-serif;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy */
+}
+.cell-media:hover {
+  transform: scale(1.15) rotate(1deg);
+  z-index: 20;
+}
+
+/* GOALS: The Badge */
+.cell-goals {
+  border-radius: 50%; /* Circle */
+  border: 3px solid rgba(255,255,255,0.5);
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.2); /* Inner depth */
+  transform: scale(0.85); /* Make circles slightly smaller than grid to float */
+  transition: all 0.3s;
+}
+.cell-goals:hover {
+  transform: scale(1);
+  box-shadow: 0 0 15px currentColor; /* Glow with its own color */
+}
+
+/* DIARY: The Page */
+.cell-diary {
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; /* Wobbly */
+  font-family: 'Patrick Hand', cursive;
+  opacity: 0.9;
+}
+
+.cell-media {
+  font-family: 'Oswald', sans-serif;
+  /* Cut out small circles on the left and right edges */
+  clip-path: polygon(
+    10% 0%, 90% 0%, 100% 10%, 100% 40%, 
+    90% 50%, 100% 60%, 100% 90%, 90% 100%, 
+    10% 100%, 0% 90%, 0% 60%, 10% 50%, 
+    0% 40%, 0% 10%
+  );
+  /* Add a subtle perforated line texture */
+  background-image: radial-gradient(circle at 50% 50%, transparent 90%, rgba(0,0,0,0.1) 90%);
+  background-size: 10px 10px; 
+}
+.cell-media:hover {
+  transform: rotate(-3deg) scale(1.1); /* Tussle the ticket */
+}
+
+.cell-university {
+  font-family: 'Merriweather', serif;
+  border: 1px solid #ddd !important;
+  /* Creates horizontal blue lines */
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 9px,
+    rgba(0, 100, 200, 0.15) 10px
+  );
+  /* A red margin line on the left */
+  border-left: 3px double rgba(255, 0, 0, 0.2) !important; 
+}
+.cell-university:hover {
+  /* Lift the bottom corner slightly */
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+  transform: translateY(-2px);
+}
+
+.cell-goals {
+  box-shadow: inset 0 0 0 2px white; /* Inner ring to separate content from chart */
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5); /* Make text pop over gradient */
+}
+
+.cell-finance {
+  font-family: 'Roboto Mono', monospace;
+  background-color: #fffdf0 !important; /* Very faint receipt yellow */
+  box-shadow: 0 2px 0 rgba(0,0,0,0.1); /* Subtle depth */
+}
+
+.cell-diary {
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  font-family: 'Patrick Hand', cursive;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Blur the content by default */
+.cell-diary > span, .cell-diary > div {
+  filter: blur(2px);
+  transition: filter 0.3s ease;
+  opacity: 0.7;
+}
+
+/* Reveal on hover */
+.cell-diary:hover > span, .cell-diary:hover > div {
+  filter: blur(0px);
+  opacity: 1;
+}
+
+/* src/index.css - Add to bottom */
+
+/* --- FINANCE MODAL: THE RECEIPT --- */
+.modal-finance-container {
+  max-width: 380px !important; /* Receipt width */
+  font-family: 'Roboto Mono', monospace; /* Data font */
+  border: none !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  background: transparent !important; /* Let the receipt shape handle background */
+}
+
+.receipt-body {
+  background-color: #fffdf0; /* Receipt paper color */
+  position: relative;
+  /* Zig-Zag bottom edge effect using gradients */
+  background-image: 
+    linear-gradient(135deg, transparent 5px, #fffdf0 5px), 
+    linear-gradient(225deg, transparent 5px, #fffdf0 5px);
+  background-position: bottom left;
+  background-size: 20px 20px;
+  background-repeat: repeat-x;
+  padding-bottom: 20px; /* Space for the zig-zag */
+  
+  /* Top border strip to match month theme */
+  border-top: 8px solid var(--theme-color, #333); 
+}
+
+/* Input Style: Line Items */
+.receipt-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed #bbb;
+  border-radius: 0;
+  font-family: 'Roboto Mono', monospace;
+  text-align: right;
+  padding-right: 0;
+  color: #333;
+}
+.receipt-input:focus {
+  background: transparent;
+  box-shadow: none;
+  border-bottom: 1px solid #333;
+}
+.receipt-label {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  color: #666;
+}
+
+/* Dashed Separator Line */
+.receipt-divider {
+  border-top: 2px dashed #ddd;
+  margin: 15px 0;
+}
