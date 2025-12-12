@@ -3,32 +3,40 @@ import React, { useState, useEffect } from 'react';
 import supabase from '../../services/supabaseClient';
 
 export default function SettingsModal({ session, onClose, themeColor, themeFont, currentMonth, currentYear }) {
-  const [activeTab, setActiveTab] = useState('finance'); // 'finance', 'income', 'university', 'goals'
+  // Main Tabs: 'finance', 'university', 'goals'
+  const [activeTab, setActiveTab] = useState('finance'); 
   
-  // Data State
+  // Sub Tabs
+  const [financeSubTab, setFinanceSubTab] = useState('accounts'); // 'accounts', 'expenses', 'income'
+  const [goalType, setGoalType] = useState('daily'); // 'daily', 'big'
+
+  // --- DATA STATE ---
+  const [accounts, setAccounts] = useState([]);
   const [expenseCats, setExpenseCats] = useState([]);
   const [incomeCats, setIncomeCats] = useState([]);
   const [courses, setCourses] = useState([]);
   const [monthlyHabits, setMonthlyHabits] = useState([]);
   const [yearlyGoals, setYearlyGoals] = useState([]);
   
-  // UI State
-  const [newCat, setNewCat] = useState('');
+  // --- UI STATE ---
+  const [newItem, setNewItem] = useState('');
   const [loading, setLoading] = useState(false);
-  const [goalType, setGoalType] = useState('daily'); // 'daily', 'big'
 
   useEffect(() => {
-    fetchCategories();
+    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentMonth, currentYear]);
 
-  const fetchCategories = async () => {
-    // 1. Fetch Categories & Courses
+  const fetchData = async () => {
+    // 1. Fetch Finance Lists
+    const { data: acc } = await supabase.from('accounts').select('*').order('created_at', { ascending: true });
     const { data: exp } = await supabase.from('expense_categories').select('*').order('created_at', { ascending: true });
     const { data: inc } = await supabase.from('income_categories').select('*').order('created_at', { ascending: true });
+    
+    // 2. Fetch University
     const { data: uni } = await supabase.from('courses').select('*').order('created_at', { ascending: true });
     
-    // 2. Fetch Goals (Context aware: Current Month/Year)
+    // 3. Fetch Goals (Context aware)
     const { data: habits } = await supabase.from('monthly_goals')
         .select('*')
         .eq('target_month', currentMonth)
@@ -40,6 +48,7 @@ export default function SettingsModal({ session, onClose, themeColor, themeFont,
         .eq('year', currentYear)
         .order('created_at', { ascending: true });
 
+    setAccounts(acc || []);
     setExpenseCats(exp || []);
     setIncomeCats(inc || []);
     setCourses(uni || []);
@@ -49,51 +58,82 @@ export default function SettingsModal({ session, onClose, themeColor, themeFont,
 
   const addItem = async (e) => {
     e.preventDefault();
-    if (!newCat.trim()) return;
+    if (!newItem.trim()) return;
     setLoading(true);
     
     let table = '';
     let payload = { user_id: session.user.id };
 
     if (activeTab === 'finance') {
-        table = 'expense_categories';
-        payload.label = newCat.trim();
-    } else if (activeTab === 'income') {
-        table = 'income_categories';
-        payload.label = newCat.trim();
+        if (financeSubTab === 'accounts') {
+            table = 'accounts';
+            payload.name = newItem.trim();
+            payload.balance = 0;
+        } else if (financeSubTab === 'expenses') {
+            table = 'expense_categories';
+            payload.label = newItem.trim();
+        } else if (financeSubTab === 'income') {
+            table = 'income_categories';
+            payload.label = newItem.trim();
+        }
     } else if (activeTab === 'university') {
         table = 'courses';
-        payload.name = newCat.trim();
+        payload.name = newItem.trim();
     } else if (activeTab === 'goals') {
         if (goalType === 'daily') {
             table = 'monthly_goals';
-            payload.title = newCat.trim();
+            payload.title = newItem.trim();
             payload.target_month = currentMonth;
             payload.target_year = currentYear;
         } else {
             table = 'yearly_goals';
-            payload.title = newCat.trim();
+            payload.title = newItem.trim();
             payload.year = currentYear;
         }
     }
     
-    await supabase.from(table).insert([payload]);
-    setNewCat('');
-    await fetchCategories();
+    const { error } = await supabase.from(table).insert([payload]);
+    if (error) alert(error.message);
+    
+    setNewItem('');
+    await fetchData();
     setLoading(false);
   };
 
-  const deleteItem = async (id, table) => {
-    if(!window.confirm("Delete this item?")) return;
+  const deleteItem = async (id, tableOverride = null) => {
+    if(!window.confirm("Delete this item? Data linked to it might be hidden.")) return;
+    
+    let table = tableOverride;
+    if (!table) {
+        if (activeTab === 'finance') {
+            if (financeSubTab === 'accounts') table = 'accounts';
+            else if (financeSubTab === 'expenses') table = 'expense_categories';
+            else if (financeSubTab === 'income') table = 'income_categories';
+        } 
+        else if (activeTab === 'university') table = 'courses';
+        else if (activeTab === 'goals') table = goalType === 'daily' ? 'monthly_goals' : 'yearly_goals';
+    }
+
     await supabase.from(table).delete().eq('id', id);
-    fetchCategories();
+    fetchData();
   };
 
-  // Helper to render lists with the new aesthetic
+  // Helper to render lists
   const renderList = (items, table, placeholder, displayKey = 'label') => (
     <div className="animate-fade-in h-100 d-flex flex-column">
         
-        {/* Sub-Tabs for Goals */}
+        {/* SUB-TABS: Finance */}
+        {activeTab === 'finance' && (
+            <div className="d-flex justify-content-center mb-4">
+                <div className="btn-group shadow-sm">
+                    <button className={`btn btn-sm px-3 fw-bold ${financeSubTab === 'accounts' ? 'btn-dark' : 'btn-outline-secondary border-0 bg-white'}`} onClick={() => setFinanceSubTab('accounts')}>Accounts</button>
+                    <button className={`btn btn-sm px-3 fw-bold ${financeSubTab === 'expenses' ? 'btn-dark' : 'btn-outline-secondary border-0 bg-white'}`} onClick={() => setFinanceSubTab('expenses')}>Expenses</button>
+                    <button className={`btn btn-sm px-3 fw-bold ${financeSubTab === 'income' ? 'btn-dark' : 'btn-outline-secondary border-0 bg-white'}`} onClick={() => setFinanceSubTab('income')}>Income</button>
+                </div>
+            </div>
+        )}
+
+        {/* SUB-TABS: Goals */}
         {activeTab === 'goals' && (
             <div className="d-flex justify-content-center mb-4">
                 <div className="btn-group shadow-sm">
@@ -108,8 +148,8 @@ export default function SettingsModal({ session, onClose, themeColor, themeFont,
             <input 
                 className="form-control settings-add-input" 
                 placeholder={placeholder} 
-                value={newCat} 
-                onChange={e => setNewCat(e.target.value)} 
+                value={newItem} 
+                onChange={e => setNewItem(e.target.value)} 
                 autoFocus
             />
             <button className="settings-add-btn" type="submit" disabled={loading}>
@@ -128,7 +168,11 @@ export default function SettingsModal({ session, onClose, themeColor, themeFont,
                 <div className="d-flex flex-column">
                     {items.map(item => (
                         <div key={item.id} className="settings-list-item">
-                            <span className="fw-bold text-dark">{item[displayKey]}</span>
+                            <div className="d-flex align-items-center">
+                                <span className="fw-bold text-dark">{item[displayKey] || item.name}</span>
+                                {/* Show Balance only for Accounts */}
+                                {item.balance !== undefined && <span className="badge bg-light text-dark border ms-2">₱{item.balance?.toLocaleString()}</span>}
+                            </div>
                             <button 
                                 className="btn btn-sm text-danger opacity-50 hover-opacity-100 p-0" 
                                 style={{fontSize:'1.1rem', lineHeight:1}}
@@ -149,10 +193,9 @@ export default function SettingsModal({ session, onClose, themeColor, themeFont,
     <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center animate-fade-in" 
          style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 3000, backdropFilter: 'blur(4px)' }}>
       
-      {/* THE CONTROL CENTER CARD */}
       <div className="settings-card w-100 modal-settings-container" style={{ '--theme-color': themeColor }}>
         
-        {/* 1. Header */}
+        {/* Header */}
         <div className="settings-header">
             <div>
                 <h5 className="m-0 fw-bold" style={{ fontFamily: themeFont, letterSpacing:'1px' }}>CONFIGURATION</h5>
@@ -161,31 +204,38 @@ export default function SettingsModal({ session, onClose, themeColor, themeFont,
             <button className="btn btn-sm btn-close btn-close-white" onClick={onClose}></button>
         </div>
 
-        {/* 2. Navigation Tabs */}
+        {/* Top Level Tabs */}
         <div className="settings-tabs">
-            {['finance', 'income', 'university', 'goals'].map(tab => (
+            {['finance', 'university', 'goals'].map(tab => (
                 <button 
                     key={tab}
                     className={`settings-tab-btn ${activeTab === tab ? 'active' : ''}`}
-                    onClick={() => { setActiveTab(tab); setNewCat(''); }}
+                    onClick={() => { setActiveTab(tab); setNewItem(''); }}
                 >
-                    {tab === 'finance' && '💸 Expenses'}
-                    {tab === 'income' && '💰 Income'}
-                    {tab === 'university' && '🎓 Courses'}
-                    {tab === 'goals' && '🎯 Goals'}
+                    {tab === 'finance' && '💰 FINANCE'}
+                    {tab === 'university' && '🎓 UNIVERSITY'}
+                    {tab === 'goals' && '🎯 GOALS'}
                 </button>
             ))}
         </div>
 
-        {/* 3. Main Content Area */}
-        <div className="p-4 flex-grow-1 bg-light">
-            {activeTab === 'finance' && renderList(expenseCats, 'expense_categories', 'e.g. Groceries')}
-            {activeTab === 'income' && renderList(incomeCats, 'income_categories', 'e.g. Salary')}
-            {activeTab === 'university' && renderList(courses, 'courses', 'e.g. Data Structures', 'name')}
+        {/* Main Content Area */}
+        <div className="p-4 flex-grow-1 bg-light d-flex flex-column h-100">
+            {/* FINANCE TAB LOGIC */}
+            {activeTab === 'finance' && (
+                financeSubTab === 'accounts' ? renderList(accounts, 'accounts', 'e.g. GCash, Wallet', 'name') :
+                financeSubTab === 'expenses' ? renderList(expenseCats, 'expense_categories', 'e.g. Food, Transport') :
+                renderList(incomeCats, 'income_categories', 'e.g. Salary, Freelance')
+            )}
+
+            {/* UNIVERSITY TAB LOGIC */}
+            {activeTab === 'university' && renderList(courses, 'courses', 'e.g. CS 101', 'name')}
+
+            {/* GOALS TAB LOGIC */}
             {activeTab === 'goals' && renderList(
                 goalType === 'daily' ? monthlyHabits : yearlyGoals, 
                 goalType === 'daily' ? 'monthly_goals' : 'yearly_goals', 
-                goalType === 'daily' ? 'e.g. Drink Water (Daily Habit)' : 'e.g. Visit Japan (Yearly Goal)', 
+                goalType === 'daily' ? 'New Habit (e.g. Drink Water)' : 'New Milestone (e.g. Visit Japan)', 
                 'title'
             )}
         </div>

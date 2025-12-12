@@ -1,10 +1,11 @@
 // src/pages/CalendarView.js
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 // COMPONENTS
 import EntryModal from '../components/modals/EntryModal';
 import AnalyticsModal from '../components/modals/AnalyticsModal';
 import SettingsModal from '../components/modals/SettingsModal';
+import OnboardingWizard from '../components/modals/OnboardingWizard'; 
 
 // HOOKS & UTILS
 import { useCalendarData } from '../hooks/useCalendarData';
@@ -14,6 +15,7 @@ import {
   getUniversityColor, getUniversityContent,
   getGoalColor, getGoalContent
 } from '../utils/pixelLogic';
+import supabase from '../services/supabaseClient';
 
 const HOLIDAYS = {
   '01-01': { name: "New Year's Day", icon: '🎆' },
@@ -30,7 +32,18 @@ const HOLIDAYS = {
 
 export default function CalendarView({ session }) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  
+  // State for Features & Onboarding
+  const [enabledFeatures, setEnabledFeatures] = useState({ 
+      finance: true, diary: true, media: true, university: true, goals: true 
+  });
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(true); // Uncomment to use OnboardingWizard
+  // const [loadingSettings, setLoadingSettings] = useState(false); // Comment to use OnboardingWizard
+
+  // Determine initial active tab safely later, default to finance for now
   const [activeTab, setActiveTab] = useState('finance'); 
+  
   const [hoveredLog, setHoveredLog] = useState(null);
   const [editingDate, setEditingDate] = useState(null); 
   const [editingData, setEditingData] = useState(null); 
@@ -45,8 +58,39 @@ export default function CalendarView({ session }) {
   const firstDayIndex = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const theme = getMonthTheme(month);
+
+  // --- CHECK ONBOARDING STATUS ---
+  useEffect(() => {
+      const checkSettings = async () => {
+          const { data, error } = await supabase.from('user_settings').select('*').eq('user_id', session.user.id).single();
+          
+          if (!data) {
+              // No settings found -> Show Onboarding
+              setShowOnboarding(true);
+          } else {
+              if (data.is_onboarded) {
+                  setEnabledFeatures(data.enabled_features);
+                  // Set active tab to first enabled feature if current default is disabled
+                  const first = Object.keys(data.enabled_features).find(k => data.enabled_features[k]);
+                  if (first) setActiveTab(first);
+              } else {
+                  setShowOnboarding(true);
+              }
+          }
+          setLoadingSettings(false);
+      };
+      checkSettings();
+  }, [session.user.id]);
+
+  const handleOnboardingFinish = (features) => {
+      setEnabledFeatures(features);
+      setShowOnboarding(false);
+      // Auto-select first enabled
+      const first = Object.keys(features).find(k => features[k]);
+      if(first) setActiveTab(first);
+  };
   
-  // --- PARTICLE GENERATOR (MEMOIZED) ---
+  // --- PARTICLE GENERATOR ---
   const particles = useMemo(() => {
     const decor = theme.decoration || { icon: '', animation: '', count: 0 };
     if (!decor.count) return null;
@@ -62,52 +106,17 @@ export default function CalendarView({ session }) {
         const leftPos = goesRight ? '0' : 'unset';
         const rightPos = goesRight ? 'unset' : '0';
         const topPos = Math.random() * 90 + 5 + '%'; 
-
-         return (
-          <span key={i} className="seasonal-particle"
-            style={{
-              position: 'absolute', left: leftPos, right: rightPos, top: topPos, fontSize: size,
-              animationName: animName, animationDuration: duration, animationDelay: delay,
-              animationIterationCount: 'infinite', animationTimingFunction: 'linear',
-            }}
-          >
-            {decor.icon}
-          </span>
-        );
+         return (<span key={i} className="seasonal-particle" style={{ position: 'absolute', left: leftPos, right: rightPos, top: topPos, fontSize: size, animationName: animName, animationDuration: duration, animationDelay: delay, animationIterationCount: 'infinite', animationTimingFunction: 'linear' }}>{decor.icon}</span>);
       }
-
       if (decor.animation === 'rise') {
-        return (
-          <span key={i} className="seasonal-particle"
-            style={{
-              position: 'absolute', left: (Math.random() * 100 + '%'), bottom: '-50px', fontSize: size,
-              animationName: 'rise', animationDuration: (Math.random() * 10 + 10 + 's'),
-              animationDelay: delay, animationIterationCount: 'infinite', animationTimingFunction: 'linear',
-            }}
-          >
-            {decor.icon}
-          </span>
-        );
+        return (<span key={i} className="seasonal-particle" style={{ position: 'absolute', left: (Math.random() * 100 + '%'), bottom: '-50px', fontSize: size, animationName: 'rise', animationDuration: (Math.random() * 10 + 10 + 's'), animationDelay: delay, animationIterationCount: 'infinite', animationTimingFunction: 'linear' }}>{decor.icon}</span>);
       }
-
-      return (
-        <span key={i} className="seasonal-particle"
-          style={{
-            position: 'absolute', left: (Math.random() * 100 + '%'), top: '-50px', fontSize: size,
-            animationName: decor.animation,
-            animationDuration: decor.animation === 'rain' ? '1.5s' : (Math.random() * 10 + 10 + 's'),
-            animationDelay: delay, animationIterationCount: 'infinite', animationTimingFunction: 'linear',
-          }}
-        >
-          {decor.icon}
-        </span>
-      );
+      return (<span key={i} className="seasonal-particle" style={{ position: 'absolute', left: (Math.random() * 100 + '%'), top: '-50px', fontSize: size, animationName: decor.animation, animationDuration: decor.animation === 'rain' ? '1.5s' : (Math.random() * 10 + 10 + 's'), animationDelay: delay, animationIterationCount: 'infinite', animationTimingFunction: 'linear' }}>{decor.icon}</span>);
     });
-
     return <div className="seasonal-bg-container">{items}</div>;
   }, [theme]); 
 
-  // --- HELPERS ---
+  // --- STYLES & HELPERS ---
   const getModalStyle = () => {
     if (!hoveredLog) return { bg: '#fff', border: 'transparent' };
     const { type, finances, diary_entries, media_logs, course_tasks, goal_progress } = hoveredLog;
@@ -119,15 +128,11 @@ export default function CalendarView({ session }) {
     else if (type === 'university') mainColor = getUniversityColor(course_tasks);
     else if (type === 'goals') mainColor = getGoalColor(monthlyGoals.length, goal_progress?.length);
 
-    return { 
-        bg: mainColor !== 'transparent' ? mainColor : '#fff',
-        border: mainColor !== 'transparent' ? mainColor : '#ccc'
-    };
+    return { bg: mainColor !== 'transparent' ? mainColor : '#fff', border: mainColor !== 'transparent' ? mainColor : '#ccc' };
   };
   const modalStyle = getModalStyle();
 
   const handlePixelClick = (dateKey, existingLog) => {
-    // FORCE LOCAL TIME COMPARISON
     const today = new Date().toLocaleDateString('en-CA');
     if (dateKey > today) { alert("🔮 You cannot write entries for the future!"); return; }
     setEditingDate(dateKey);
@@ -137,8 +142,6 @@ export default function CalendarView({ session }) {
   // --- GRID RENDERER ---
   const renderGrid = (type, getStyleData) => {
     const pixels = [];
-    
-    // 1. GET LOCAL TODAY STRING (YYYY-MM-DD)
     const today = new Date().toLocaleDateString('en-CA'); 
 
     for (let i = 0; i < firstDayIndex; i++) pixels.push(<div key={`blank-${i}`}></div>);
@@ -151,10 +154,9 @@ export default function CalendarView({ session }) {
       let styleData = getStyleData(dayData);
       
       const isFuture = dateKey > today;
-      const isToday = dateKey === today; // Exact match on 'YYYY-MM-DD'
+      const isToday = dateKey === today;
       const holiday = HOLIDAYS[dateString];
 
-      // GOALS: Calculate Conic Gradient
       if (type === 'goals' && !isFuture) {
          const total = monthlyGoals.length;
          const done = dayData?.goal_progress?.length || 0;
@@ -164,15 +166,10 @@ export default function CalendarView({ session }) {
       }
 
       pixels.push(
-        <div 
-            key={`${type}-${d}`} className="d-flex flex-column align-items-center justify-content-center h-100 w-100"
+        <div key={`${type}-${d}`} className="d-flex flex-column align-items-center justify-content-center h-100 w-100"
             onMouseEnter={() => !isFuture && setHoveredLog(dayData ? { ...dayData, dayNum: d, type } : { date: dateKey, dayNum: d, type, isEmpty: true })}
             onMouseLeave={() => setHoveredLog(null)}
-            onClick={() => handlePixelClick(dateKey, dayData)}
-        >
-          {/* ADDED: 'is-today' class if isToday is true. 
-             This triggers the CSS override in index.css 
-          */}
+            onClick={() => handlePixelClick(dateKey, dayData)}>
           <div className={`d-flex justify-content-center align-items-center shadow-sm position-relative cell-${type} ${isToday ? 'cell-today' : ''}`}
             style={{ 
               width: '80%', height: '70%', 
@@ -183,55 +180,40 @@ export default function CalendarView({ session }) {
               cursor: isFuture ? 'not-allowed' : 'pointer',
               color: type === 'goals' ? 'transparent' : 'white', 
               fontSize: '12px', fontWeight: 'bold',
-              
-              // Scale Up Today logic handled by CSS class 'cell-today' now, but fallback here:
               transform: (!isFuture && hoveredLog?.date === dateKey && hoveredLog?.type === type) ? 'scale(1.15)' : 'scale(1)',
-              
               zIndex: hoveredLog?.date === dateKey ? 10 : (isToday ? 5 : 1)
             }} 
-            title={holiday ? holiday.name : ''}
-          >
+            title={holiday ? holiday.name : ''}>
             {!isFuture && styleData.children}
             {holiday && !isFuture && !styleData.children && <span style={{fontSize:'12px', color: '#555'}}>{holiday.icon}</span>}
-            
-            {/* NEW BADGE: Always shows if isToday is true */}
-            {isToday && (
-                <div className="today-badge">TODAY</div>
-            )}
+            {isToday && (<div className="today-badge">TODAY</div>)}
           </div>
-          <span style={{ 
-              fontSize: '10px', 
-              color: isToday ? theme.accent : (isFuture ? '#ccc' : (holiday ? theme.primary : '#666')), 
-              marginTop:'2px', 
-              fontWeight: (holiday || isToday) ? 'bold' : 'normal' 
-          }}>
-              {d}
-          </span>
+          <span style={{ fontSize: '10px', color: isToday ? theme.accent : (isFuture ? '#ccc' : (holiday ? theme.primary : '#666')), marginTop:'2px', fontWeight: (holiday || isToday) ? 'bold' : 'normal' }}>{d}</span>
         </div>
       );
     }
     
-    return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridTemplateRows: 'repeat(6, 1fr)', height: '100%', width: '100%' }}>
-            {pixels}
-        </div>
-    );
+    return (<div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridTemplateRows: 'repeat(6, 1fr)', height: '100%', width: '100%' }}>{pixels}</div>);
   };
 
+  if (loadingSettings) return <div className="d-flex h-100 justify-content-center align-items-center">Loading...</div>;
+
   return (
-    // Pass theme accent to CSS variables for the 'Today' glow
-    <div className="container-fluid p-0 d-flex flex-row" 
-         style={{ 
-             backgroundColor: theme.bg, 
-             height: '100vh', 
-             overflow: 'hidden', 
-             position: 'relative', 
-             fontFamily: theme.font,
-             '--theme-accent': theme.accent 
-         }}>
+    <div className="container-fluid p-0 d-flex flex-column flex-md-row app-layout-container" 
+         style={{ backgroundColor: theme.bg, fontFamily: theme.font, '--theme-accent': theme.accent }}>
       
       {particles}
       
+      {/* Uncomment to use OnboardingWizard */}
+      {showOnboarding && (
+          <OnboardingWizard 
+              session={session} 
+              onFinish={handleOnboardingFinish} 
+              themeColor={theme.primary} 
+              themeFont={theme.font} 
+          />
+      )}
+
       {/* MODALS */}
       {editingDate && (
           <EntryModal 
@@ -252,7 +234,7 @@ export default function CalendarView({ session }) {
       )}
 
       {/* SIDEBAR */}
-      <div className="d-flex flex-column p-4 shadow bg-white h-100" style={{ width: '280px', zIndex: 20 }}>
+      <div className="d-flex flex-column p-4 shadow bg-white sidebar-container">
           <div className="mb-4 text-center">
              <h6 className="text-muted text-uppercase small fw-bold tracking-wide">Journal 2026</h6>
              <h2 className="fw-bold m-0" style={{ color: theme.primary, fontSize: '2.5rem' }}>{monthName}</h2>
@@ -265,7 +247,10 @@ export default function CalendarView({ session }) {
           </div>
 
           <div className="d-flex flex-column gap-2 mb-auto">
-             {['finance', 'diary', 'media', 'university', 'goals'].map((tab) => (
+             {/* Only render enabled features */}
+             {['finance', 'diary', 'media', 'university', 'goals']
+                .filter(tab => enabledFeatures[tab])
+                .map((tab) => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
                     className={`btn text-start px-3 py-2 fw-bold d-flex align-items-center justify-content-between ${activeTab === tab ? 'text-white shadow-sm' : 'text-muted bg-light'}`}
                     style={{ backgroundColor: activeTab === tab ? theme.primary : '#f8f9fa', borderRadius: '12px', transition: 'all 0.2s' }}>
@@ -283,32 +268,34 @@ export default function CalendarView({ session }) {
       </div>
 
       {/* CONTENT */}
-      <div className="d-flex flex-column flex-grow-1 h-100" style={{ zIndex: 5, overflow: 'hidden' }}>
+      <div className="d-flex flex-column flex-grow-1 main-content">
         {loading ? <div className="text-center p-5 m-auto">Loading data...</div> : (
           <div className="d-flex flex-column h-100 p-3">
             <div className="d-flex text-center fw-bold text-muted small pb-2" style={{ flex: '0 0 auto' }}>
                 {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(day => (<div key={day} style={{ width: '14.28%' }}>{day}</div>))}
             </div>
-            <div className="card shadow-sm border-0 h-100 w-100" style={{ backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: '15px', overflow:'hidden' }}>
+            
+            <div className="card shadow-sm border-0 h-100 w-100" style={{ backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: '15px', overflow:'hidden', minHeight:'400px' }}>
                 <div className="card-body p-2 h-100">
-                    {activeTab === 'finance' && renderGrid('finance', (data) => ({
+                    {/* Render Grid only if Tab is Active AND Enabled */}
+                    {activeTab === 'finance' && enabledFeatures.finance && renderGrid('finance', (data) => ({
                         backgroundColor: getFinanceColor(data?.finances?.[0]?.expense_amount, month), 
                         border: getFinanceBorder(data?.finances?.[0]?.savings_amount, month),
                         opacity: getFinanceOpacity(data?.finances?.[0]?.income_amount)
                     }))}
-                    {activeTab === 'diary' && renderGrid('diary', (data) => ({ backgroundColor: getMoodColor(data?.diary_entries?.[0]?.ai_mood, data?.diary_entries?.[0]?.highlights) }))}
-                    {activeTab === 'media' && renderGrid('media', (data) => ({ backgroundColor: getMediaColor(data?.media_logs?.[0]), children: <span style={{fontSize:'10px'}}>{getMediaRating(data?.media_logs?.[0])}</span> }))}
-                    {activeTab === 'university' && renderGrid('university', (data) => ({ backgroundColor: getUniversityColor(data?.course_tasks), children: <span style={{fontSize:'10px', color:'#333', fontWeight:'bold'}}>{getUniversityContent(data?.course_tasks)}</span> }))}
-                    {activeTab === 'goals' && renderGrid('goals', (data) => ({ children: <span style={{fontSize:'9px', color: '#333', textShadow: '0 0 2px white'}}>{getGoalContent(monthlyGoals.length, data?.goal_progress?.length)}</span> }))}
+                    {activeTab === 'diary' && enabledFeatures.diary && renderGrid('diary', (data) => ({ backgroundColor: getMoodColor(data?.diary_entries?.[0]?.ai_mood, data?.diary_entries?.[0]?.highlights) }))}
+                    {activeTab === 'media' && enabledFeatures.media && renderGrid('media', (data) => ({ backgroundColor: getMediaColor(data?.media_logs?.[0]), children: <span style={{fontSize:'10px'}}>{getMediaRating(data?.media_logs?.[0])}</span> }))}
+                    {activeTab === 'university' && enabledFeatures.university && renderGrid('university', (data) => ({ backgroundColor: getUniversityColor(data?.course_tasks), children: <span style={{fontSize:'10px', color:'#333', fontWeight:'bold'}}>{getUniversityContent(data?.course_tasks)}</span> }))}
+                    {activeTab === 'goals' && enabledFeatures.goals && renderGrid('goals', (data) => ({ children: <span style={{fontSize:'9px', color: '#333', textShadow: '0 0 2px white'}}>{getGoalContent(monthlyGoals.length, data?.goal_progress?.length)}</span> }))}
                 </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* HOVER OVERLAY */}
+      {/* Hover Overlay */}
       {hoveredLog && !hoveredLog.isEmpty && (
-         <div className="position-fixed bottom-0 end-0 p-4" style={{ zIndex: 1000, pointerEvents: 'none' }}>
+         <div className="position-fixed bottom-0 end-0 p-4 d-none d-md-block" style={{ zIndex: 1000, pointerEvents: 'none' }}>
              <div className="card shadow-lg animate-fade-in" style={{ width: '250px', borderRadius: '15px', borderLeft: `5px solid ${modalStyle.border}`, backgroundColor: 'rgba(255,255,255, 0.95)' }}>
                  <div className="card-body p-3">
                     <h6 className="m-0 fw-bold" style={{color: modalStyle.border}}>{monthName} {hoveredLog.dayNum}</h6>

@@ -2,33 +2,35 @@
 import React from 'react';
 import { useEntryLogic } from '../../hooks/useEntryLogic';
 
-// Imports Layouts & Forms
+// Import Layout Wrappers (Visuals)
 import { FinanceLayout, DiaryLayout, MediaLayout, UniversityLayout, GoalsLayout } from './EntryLayouts';
+
+// Import Forms (Inputs)
 import FinanceForm from '../forms/FinanceForm';
 import DiaryForm from '../forms/DiaryForm';
 import MediaForm from '../forms/MediaForm';
 import UniversityForm from '../forms/UniversityForm';
 import GoalsForm from '../forms/GoalsForm';
 
-export default function EntryModal({ session, date, existingData, onClose, onSaveSuccess, activeTab, goalStreaks, themeColor, themeFont }) {
+export default function EntryModal({ 
+  session, 
+  date, 
+  existingData, 
+  onClose, 
+  onSaveSuccess, 
+  activeTab, 
+  goalStreaks, 
+  themeColor, 
+  themeFont 
+}) {
   
-  // 1. ALL LOGIC IS HERE
+  // 1. EXTRACT LOGIC TO HOOK
   const { 
     loading, handleSubmit, 
     financeState, uniState, goalsState, diaryState, mediaState 
   } = useEntryLogic({ session, date, existingData, activeTab, onSaveSuccess });
 
-  // 2. CONTAINER STYLES (Determine width based on tab)
-  const getWidth = () => {
-      switch(activeTab) {
-          case 'finance': return '380px';
-          case 'media': return '420px';
-          case 'university': return '450px';
-          case 'goals': return '480px';
-          default: return '550px';
-      }
-  };
-
+  // 2. DETERMINE CSS CLASSES (Responsive)
   const containerClass = `card shadow-lg overflow-hidden ${
       activeTab === 'finance' ? 'modal-finance-container' : 
       activeTab === 'diary' ? 'modal-diary-container' : 
@@ -42,9 +44,15 @@ export default function EntryModal({ session, date, existingData, onClose, onSav
     <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center animate-fade-in" 
          style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 2000, backdropFilter: 'blur(3px)' }}>
       
+      {/* NOTE: We removed inline 'maxWidth' and 'width' here.
+          Those are now handled by the CSS classes in index.css 
+          to support mobile responsiveness.
+      */}
       <div className={containerClass} style={{ 
-            width: '90%', maxWidth: getWidth(), maxHeight: '90vh', overflowY: 'auto',
-            borderTop: 'none', '--theme-color': themeColor 
+            maxHeight: '90vh', 
+            overflowY: 'auto',
+            borderTop: 'none', 
+            '--theme-color': themeColor 
       }}>
         <form onSubmit={handleSubmit}>
             
